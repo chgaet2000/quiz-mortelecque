@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Résultats Quiz Sécurité</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{
+    --bg:#f3f1ea; --surface:#ffffff; --surface-2:#eae6d8; --ink:#1c1a15; --ink-dim:#6b6558; --ink-faint:#948d7c;
+    --line:#dcd6c4; --line-strong:#c7bfa8; --accent:#1f4e63; --accent-ink:#ffffff; --accent-soft:#dbe8ec; --accent-soft-ink:#163b4c;
+    --ok:#2f7d4f; --ok-soft:#dcefe1; --warn:#b5451c; --warn-soft:#f6dfd3; --muted:#8a8272; --muted-soft:#e7e2d3;
+    --shadow:0 1px 2px rgba(28,26,21,.06), 0 6px 16px -8px rgba(28,26,21,.18); --radius:14px; --radius-sm:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14181a; --surface:#1c2225; --surface-2:#232a2d; --ink:#eef0ea; --ink-dim:#9aa39c; --ink-faint:#717b76;
+      --line:#2c3336; --line-strong:#3a4245; --accent:#68b0c9; --accent-ink:#0d1c21; --accent-soft:#20343b; --accent-soft-ink:#a9d7e6;
+      --ok:#5cbd83; --ok-soft:#1c3327; --warn:#e8875e; --warn-soft:#3a2419; --muted:#8b9490; --muted-soft:#262d2a;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 20px -10px rgba(0,0,0,.5);
+    }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:'Barlow Condensed','IBM Plex Sans',sans-serif; text-transform:uppercase; letter-spacing:.02em; margin:0; font-weight:700; }
+  .mono{ font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; }
+  button,input{ font-family:inherit; font-size:14px; color:var(--ink); }
+  .hidden{ display:none !important; }
+  .wrap{ max-width:1100px; margin:0 auto; padding:0 20px; }
+
+  #login{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-card{ width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px; }
+  .login-card h1{ font-size:28px; }
+  .login-card p{ color:var(--ink-dim); font-size:14px; margin:6px 0 20px; }
+  .login-card label{ display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+  .login-card input{ width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface-2); }
+  input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .msg-err{ color:var(--warn); background:var(--warn-soft); padding:10px 12px; border-radius:var(--radius-sm); font-size:13px; margin-top:14px; }
+
+  .btn{ appearance:none; border:none; cursor:pointer; border-radius:var(--radius-sm); padding:10px 16px; font-weight:600; background:var(--accent); color:var(--accent-ink); min-height:40px; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-ghost{ background:var(--surface-2); color:var(--ink); border:1px solid var(--line-strong); }
+  .btn-danger{ background:transparent; color:var(--warn); border:1px solid var(--warn); }
+  .btn-block{ width:100%; margin-top:20px; }
+
+  header.top{ background:var(--surface); border-bottom:1px solid var(--line); }
+  header.top .wrap{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:14px; padding-bottom:14px; flex-wrap:wrap; }
+  header.top h1{ font-size:24px; }
+  .who{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-dim); }
+
+  .filters{ display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:20px 0 16px; }
+  .filters .f{ display:flex; flex-direction:column; gap:4px; }
+  .filters label{ font-size:12px; color:var(--ink-dim); font-weight:600; }
+  .filters input{ padding:9px 10px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); min-height:40px; }
+
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:16px; }
+  .kpi{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); }
+  .kpi .lbl{ font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-dim); font-weight:600; }
+  .kpi .num{ font-family:'IBM Plex Mono',monospace; font-size:32px; font-weight:600; margin-top:4px; }
+
+  .panel{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); margin-bottom:16px; }
+  .panel h2{ font-size:17px; margin-bottom:10px; }
+  .chart-box{ position:relative; height:380px; }
+  .empty-note{ color:var(--ink-faint); font-size:13.5px; padding:40px 0; text-align:center; }
+
+  .table-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{ text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-dim); padding:10px; border-bottom:1px solid var(--line-strong); white-space:nowrap; cursor:pointer; user-select:none; }
+  th.sorted::after{ content:' ▾'; } th.sorted.asc::after{ content:' ▴'; }
+  td{ padding:10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr.row{ cursor:pointer; } tr.row:hover td{ background:var(--surface-2); }
+  .badge{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap; }
+  .badge.ok{ background:var(--ok-soft); color:var(--ok); } .badge.warn{ background:var(--warn-soft); color:var(--warn); } .badge.so{ background:var(--muted-soft); color:var(--muted); } .badge.acc{ background:var(--accent-soft); color:var(--accent-soft-ink); }
+  .foot{ color:var(--ink-faint); font-size:12px; padding:24px 0 40px; text-align:center; }
+
+  #detail{ position:fixed; inset:0; z-index:50; background:var(--bg); overflow:auto; }
+  .report{ max-width:780px; margin:0 auto; padding:20px; }
+  .report-bar{ display:flex; gap:8px; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; }
+  .sheet{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:28px; box-shadow:var(--shadow); }
+  .sheet .brand{ font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); font-weight:700; font-size:14px; }
+  .sheet h1{ font-size:32px; margin:4px 0 14px; }
+  .summary{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .summary .tile{ flex:1 1 110px; background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; text-align:center; }
+  .summary .tile .n{ font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; } .summary .tile .l{ font-size:11px; text-transform:uppercase; color:var(--ink-dim); letter-spacing:.04em; }
+  .kv{ display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .kv .k{ color:var(--ink); } .kv .k b{ color:var(--ink-dim); font-weight:600; margin-right:6px; }
+  .sheet-foot{ margin-top:24px; font-size:12px; color:var(--ink-faint); border-top:1px solid var(--line); padding-top:10px; }
+
+  @media (max-width:640px){ .wrap{ padding:0 12px; } .sheet{ padding:18px; } }
+  @media print{
+    body{ background:#fff; color:#000; }
+    body > *:not(#detail){ display:none !important; }
+    #detail{ position:static; overflow:visible; background:#fff; }
+    .report{ max-width:none; padding:0; } .report-bar{ display:none; }
+    .sheet{ border:none; box-shadow:none; padding:0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="setup" class="hidden" style="padding:40px 20px;text-align:center;">
+  <h1>Configuration manquante</h1>
+  <p>Renseignez <b>SUPABASE_URL</b> et <b>SUPABASE_ANON_KEY</b> dans <code>config.js</code>.</p>
+</div>
+
+<div id="login" class="hidden">
+  <form class="login-card" id="loginForm">
+    <h1>Résultats du quiz</h1>
+    <p>Accès réservé. Connectez-vous avec votre compte.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Mot de passe</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div id="loginErr" class="msg-err hidden"></div>
+    <button class="btn btn-block" id="loginBtn" type="submit">Se connecter</button>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header class="top"><div class="wrap">
+    <h1>Quiz Sécurité — Résultats</h1>
+    <div class="who"><span id="whoEmail"></span><button class="btn btn-ghost" id="logoutBtn">Déconnexion</button></div>
+  </div></header>
+
+  <main class="wrap">
+    <div class="filters">
+      <div class="f"><label for="fFrom">Du</label><input type="date" id="fFrom"></div>
+      <div class="f"><label for="fTo">Au</label><input type="date" id="fTo"></div>
+      <div class="f" style="flex:1 1 220px;"><label for="fSearch">Recherche (nom, prénom)</label><input type="search" id="fSearch" placeholder="Rechercher…"></div>
+      <button class="btn btn-ghost" id="fReset">Réinitialiser</button>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel"><h2>Erreurs par question</h2><div class="chart-box"><canvas id="chQ"></canvas></div></div>
+
+    <div class="panel">
+      <div class="table-head"><h2 id="tableTitle">Participants</h2><button class="btn btn-ghost" id="csvBtn">Exporter en CSV</button></div>
+      <div class="table-scroll"><table>
+        <thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody>
+      </table></div>
+    </div>
+    <div class="foot" id="foot"></div>
+  </main>
+</div>
+
+<div id="detail" class="hidden"></div>
+
+<script>
+"use strict";
+const CFG = window.QUIZ_CONFIG || {};
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const show = (id, on) => $(id).classList.toggle('hidden', !on);
+
+let sb = null, ROLE = null, ALL = [], VIEW = [], sortKey = 'date', sortDir = 'desc', chart = null;
+
+function fmtDateTime(iso){ const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDur(s){ if(s == null) return '—'; const m = Math.floor(s/60); return m ? m + ' min ' + String(s%60).padStart(2,'0') + ' s' : s + ' s'; }
+function localDay(iso){ const d = new Date(iso); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function scoreBadge(r){ const p = r.score / r.total; return '<span class="badge '+(p >= .8 ? 'ok' : p >= .5 ? 'acc' : 'warn')+'">'+r.score+' / '+r.total+'</span>'; }
+
+/* ---------- Auth ---------- */
+async function boot(){
+  if(!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY){ show('setup', true); return; }
+  sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+  const { data } = await sb.auth.getSession();
+  if(data.session) await enter(data.session.user); else show('login', true);
+}
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('loginBtn'); btn.disabled = true; $('loginErr').classList.add('hidden');
+  const { data, error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+  btn.disabled = false;
+  if(error){ $('loginErr').textContent = 'Identifiants incorrects.'; $('loginErr').classList.remove('hidden'); return; }
+  await enter(data.user);
+});
+$('logoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+
+async function enter(user){
+  const { data: me } = await sb.from('allowed_users').select('role').maybeSingle();
+  if(!me){
+    await sb.auth.signOut(); show('app', false); show('login', true);
+    $('loginErr').textContent = 'Ce compte n’est pas autorisé à consulter les résultats.'; $('loginErr').classList.remove('hidden'); return;
+  }
+  ROLE = me.role;
+  $('whoEmail').textContent = user.email;
+  show('login', false); show('app', true);
+  await loadData();
+}
+
+async function loadData(){
+  ALL = [];
+  const size = 1000;
+  for(let from = 0; ; from += size){
+    const { data, error } = await sb.from('quiz_resultats').select('*').order('created_at', { ascending:false }).range(from, from + size - 1);
+    if(error){ $('foot').textContent = 'Erreur de chargement : ' + error.message; break; }
+    ALL.push(...data);
+    if(data.length < size) break;
+  }
+  apply();
+}
+
+/* ---------- Filtres ---------- */
+['fFrom','fTo','fSearch'].forEach(id => $(id).addEventListener('input', apply));
+$('fReset').addEventListener('click', () => { ['fFrom','fTo','fSearch'].forEach(id => $(id).value = ''); apply(); });
+
+function apply(){
+  const from = $('fFrom').value, to = $('fTo').value, q = $('fSearch').value.trim().toLowerCase();
+  VIEW = ALL.filter(r => {
+    const d = localDay(r.created_at);
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    if(q && !(r.nom + ' ' + r.prenom).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  renderKpis(); renderChart(); renderTable();
+}
+
+function renderKpis(){
+  const n = VIEW.length;
+  const avg = n ? VIEW.reduce((s,r) => s + r.score, 0) / n : null;
+  const perfect = VIEW.filter(r => r.score === r.total).length;
+  const total = n ? VIEW[0].total : 15;
+  $('kpis').innerHTML =
+    '<div class="kpi"><div class="lbl">Participants</div><div class="num">'+n+'</div></div>'
+  + '<div class="kpi"><div class="lbl">Score moyen (1er coup)</div><div class="num">'+(avg == null ? '—' : avg.toFixed(1).replace('.',',')+' / '+total)+'</div></div>'
+  + '<div class="kpi"><div class="lbl">Sans faute</div><div class="num">'+perfect+'</div></div>';
+}
+
+/* ---------- Graphique ---------- */
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function renderChart(){
+  if(chart){ chart.destroy(); chart = null; }
+  const box = $('chQ').parentElement; box.querySelector('.empty-note')?.remove();
+  const counts = {}, labels = {};
+  VIEW.forEach(r => (r.details || []).forEach(d => { counts[d.n] = (counts[d.n] || 0) + Math.max(0, d.tentatives - 1); labels[d.n] = d.question; }));
+  const keys = Object.keys(counts).map(Number).sort((a,b) => a-b);
+  $('chQ').style.display = keys.length ? '' : 'none';
+  if(!keys.length){ const d = document.createElement('div'); d.className = 'empty-note'; d.textContent = 'Pas encore de résultats.'; box.appendChild(d); return; }
+  Chart.defaults.font.family = "'IBM Plex Sans', sans-serif"; Chart.defaults.color = css('--ink-dim');
+  chart = new Chart($('chQ'), {
+    type:'bar',
+    data:{ labels: keys.map(k => 'Q' + k), datasets:[{ label:'Mauvaises réponses', data: keys.map(k => counts[k]), backgroundColor: css('--warn'), borderRadius:4 }] },
+    options:{ maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ title: items => 'Q' + keys[items[0].dataIndex] + ' — ' + labels[keys[items[0].dataIndex]] } } },
+      scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ color: css('--line') }, ticks:{ precision:0 } } } }
+  });
+}
+
+/* ---------- Tableau ---------- */
+const COLS = [['date','Date'], ['nom','Nom'], ['prenom','Prénom'], ['score','Score (1er coup)'], ['erreurs','Erreurs'], ['duree','Durée']];
+function sortVal(r, k){
+  switch(k){ case 'date': return r.created_at; case 'nom': return r.nom.toLowerCase(); case 'prenom': return r.prenom.toLowerCase();
+    case 'score': return r.score; case 'erreurs': return r.erreurs; case 'duree': return r.duree_sec || 0; }
+}
+function renderTable(){
+  $('tableTitle').textContent = 'Participants (' + VIEW.length + ')';
+  $('thead').innerHTML = COLS.map(([k,l]) => '<th data-k="'+k+'" class="'+(sortKey===k ? 'sorted'+(sortDir==='asc'?' asc':'') : '')+'">'+l+'</th>').join('');
+  $('thead').querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.k; if(sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; sortDir = k === 'nom' || k === 'prenom' ? 'asc' : 'desc'; }
+    renderTable();
+  }));
+  const sorted = VIEW.slice().sort((a,b) => { const x = sortVal(a,sortKey), y = sortVal(b,sortKey); return (x < y ? -1 : x > y ? 1 : 0) * (sortDir === 'asc' ? 1 : -1); });
+  $('tbody').innerHTML = sorted.map(r =>
+    '<tr class="row" data-id="'+r.id+'"><td class="mono">'+fmtDateTime(r.created_at)+'</td><td>'+esc(r.nom)+'</td><td>'+esc(r.prenom)+'</td><td>'+scoreBadge(r)+'</td>'
+    + '<td>'+(r.erreurs > 0 ? '<span class="badge warn">'+r.erreurs+'</span>' : '<span class="badge so">0</span>')+'</td><td class="mono">'+fmtDur(r.duree_sec)+'</td></tr>'
+  ).join('') || '<tr><td colspan="6" class="empty-note">Aucun résultat.</td></tr>';
+  $('tbody').querySelectorAll('tr.row').forEach(tr => tr.addEventListener('click', () => openDetail(Number(tr.dataset.id))));
+  $('foot').textContent = ALL.length + ' participation(s) au total';
+}
+
+/* ---------- CSV ---------- */
+function csvCell(v){ let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }
+$('csvBtn').addEventListener('click', () => {
+  const nQ = Math.max(0, ...VIEW.map(r => (r.details || []).length));
+  const head = ['Date','Nom','Prénom','Score (1er coup)','Total','Erreurs','Durée (s)'].concat(Array.from({ length:nQ }, (_, i) => 'Q' + (i+1) + ' essais'));
+  const lines = [head.map(csvCell).join(';')].concat(VIEW.map(r => [fmtDateTime(r.created_at), r.nom, r.prenom, r.score, r.total, r.erreurs, r.duree_sec]
+    .concat(Array.from({ length:nQ }, (_, i) => (r.details || [])[i]?.tentatives ?? '')).map(csvCell).join(';')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'quiz_securite_' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
+});
+
+/* ---------- Détail d'un participant ---------- */
+function openDetail(id){
+  const r = ALL.find(x => x.id === id); if(!r) return;
+  const rows = (r.details || []).map(d => '<div class="kv"><span class="k"><b>Q'+d.n+'</b>'+esc(d.question)+'</span><span>'
+    + (d.tentatives === 1 ? '<span class="badge ok">1er coup</span>' : '<span class="badge warn">'+d.tentatives+' essais</span>') + '</span></div>').join('');
+  $('detail').innerHTML =
+    '<div class="report"><div class="report-bar"><button class="btn btn-ghost" id="dClose">← Retour</button><div style="display:flex;gap:8px;">'
+    + (ROLE === 'admin' ? '<button class="btn btn-danger" id="dDel">Supprimer</button>' : '')
+    + '<button class="btn" id="dPrint">Télécharger le PDF</button></div></div>'
+    + '<div class="sheet"><div class="brand">Quiz Sécurité</div><h1>'+esc(r.prenom)+' '+esc(r.nom)+'</h1>'
+    + '<div class="summary"><div class="tile"><div class="n">'+r.score+' / '+r.total+'</div><div class="l">Réussies du 1er coup</div></div>'
+    + '<div class="tile"><div class="n">'+r.erreurs+'</div><div class="l">Erreurs</div></div>'
+    + '<div class="tile"><div class="n">'+fmtDur(r.duree_sec)+'</div><div class="l">Durée</div></div></div>'
+    + rows
+    + '<div class="sheet-foot">Passé le '+fmtDateTime(r.created_at)+' · Réf. '+r.id+'</div></div></div>';
+  show('detail', true); $('detail').scrollTop = 0;
+  $('dClose').addEventListener('click', () => show('detail', false));
+  $('dPrint').addEventListener('click', () => { const t = document.title; document.title = 'Quiz sécurité ' + r.prenom + ' ' + r.nom; window.print(); document.title = t; });
+  const del = $('dDel');
+  if(del) del.addEventListener('click', async () => {
+    if(!confirm('Supprimer définitivement ce résultat ?')) return;
+    const { data, error } = await sb.from('quiz_resultats').delete().eq('id', id).select();
+    if(error || !data || !data.length){ alert('Suppression impossible.'); return; }
+    ALL = ALL.filter(x => x.id !== id); show('detail', false); apply();
+  });
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') show('detail', false); });
+
+boot();
+</script>
+</body>
+</html>
