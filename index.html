@@ -119,7 +119,7 @@
       <input type="text" id="nom" autocomplete="family-name" autocapitalize="characters" maxlength="80" required>
       <label for="prenom">Prénom</label>
       <input type="text" id="prenom" autocomplete="given-name" autocapitalize="words" maxlength="80" required>
-      <label for="ar">Numéro d'AR <span class="opt">(si connu, facultatif)</span></label>
+      <label for="ar">Numéro de commande <span class="opt">(si connu)</span> ou nom de l'agence d'intérim</label>
       <input type="text" id="ar" autocomplete="off" autocapitalize="characters" maxlength="40">
       <div style="height:20px"></div>
       <button class="btn" type="submit" id="goBtn" disabled>GO !</button>
@@ -314,7 +314,7 @@ function recapHtml(r){
   const e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   return '<div><span>Nom</span><b>' + e(r.nom) + '</b></div>'
        + '<div><span>Prénom</span><b>' + e(r.prenom) + '</b></div>'
-       + '<div><span>N° d\'AR</span><b>' + e(r.numero_ar || 'Non renseigné') + '</b></div>'
+       + '<div><span>N° commande / agence</span><b>' + e(r.numero_ar || 'Non renseigné') + '</b></div>'
        + '<div><span>Score (1er coup)</span><b>' + r.score + ' / ' + r.total + '</b></div>';
 }
 
