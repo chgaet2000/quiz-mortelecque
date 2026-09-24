@@ -131,7 +131,7 @@
     <div class="filters">
       <div class="f"><label for="fFrom">Du</label><input type="date" id="fFrom"></div>
       <div class="f"><label for="fTo">Au</label><input type="date" id="fTo"></div>
-      <div class="f" style="flex:1 1 220px;"><label for="fSearch">Recherche (nom, prénom)</label><input type="search" id="fSearch" placeholder="Rechercher…"></div>
+      <div class="f" style="flex:1 1 220px;"><label for="fSearch">Recherche (nom, prénom, n° d'AR, référence)</label><input type="search" id="fSearch" placeholder="Rechercher…"></div>
       <button class="btn btn-ghost" id="fReset">Réinitialiser</button>
     </div>
 
@@ -223,7 +223,7 @@ function apply(){
     const d = localDay(r.created_at);
     if(from && d < from) return false;
     if(to && d > to) return false;
-    if(q && !(r.nom + ' ' + r.prenom).toLowerCase().includes(q)) return false;
+    if(q && !(r.nom + ' ' + r.prenom + ' ' + (r.numero_ar || '') + ' ' + (r.reference || '')).toLowerCase().includes(q)) return false;
     return true;
   });
   renderKpis(); renderChart(); renderTable();
@@ -260,9 +260,9 @@ function renderChart(){
 }
 
 /* ---------- Tableau ---------- */
-const COLS = [['date','Date'], ['nom','Nom'], ['prenom','Prénom'], ['score','Score (1er coup)'], ['erreurs','Erreurs'], ['duree','Durée']];
+const COLS = [['date','Date'], ['nom','Nom'], ['prenom','Prénom'], ['ar','N° d\'AR'], ['score','Score (1er coup)'], ['erreurs','Erreurs'], ['duree','Durée']];
 function sortVal(r, k){
-  switch(k){ case 'date': return r.created_at; case 'nom': return r.nom.toLowerCase(); case 'prenom': return r.prenom.toLowerCase();
+  switch(k){ case 'date': return r.created_at; case 'nom': return r.nom.toLowerCase(); case 'prenom': return r.prenom.toLowerCase(); case 'ar': return (r.numero_ar || '').toLowerCase();
     case 'score': return r.score; case 'erreurs': return r.erreurs; case 'duree': return r.duree_sec || 0; }
 }
 function renderTable(){
@@ -274,9 +274,9 @@ function renderTable(){
   }));
   const sorted = VIEW.slice().sort((a,b) => { const x = sortVal(a,sortKey), y = sortVal(b,sortKey); return (x < y ? -1 : x > y ? 1 : 0) * (sortDir === 'asc' ? 1 : -1); });
   $('tbody').innerHTML = sorted.map(r =>
-    '<tr class="row" data-id="'+r.id+'"><td class="mono">'+fmtDateTime(r.created_at)+'</td><td>'+esc(r.nom)+'</td><td>'+esc(r.prenom)+'</td><td>'+scoreBadge(r)+'</td>'
+    '<tr class="row" data-id="'+r.id+'"><td class="mono">'+fmtDateTime(r.created_at)+'</td><td>'+esc(r.nom)+'</td><td>'+esc(r.prenom)+'</td><td>'+esc(r.numero_ar || '—')+'</td><td>'+scoreBadge(r)+'</td>'
     + '<td>'+(r.erreurs > 0 ? '<span class="badge warn">'+r.erreurs+'</span>' : '<span class="badge so">0</span>')+'</td><td class="mono">'+fmtDur(r.duree_sec)+'</td></tr>'
-  ).join('') || '<tr><td colspan="6" class="empty-note">Aucun résultat.</td></tr>';
+  ).join('') || '<tr><td colspan="7" class="empty-note">Aucun résultat.</td></tr>';
   $('tbody').querySelectorAll('tr.row').forEach(tr => tr.addEventListener('click', () => openDetail(Number(tr.dataset.id))));
   $('foot').textContent = ALL.length + ' participation(s) au total';
 }
@@ -285,8 +285,8 @@ function renderTable(){
 function csvCell(v){ let s = String(v == null ? '' : v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }
 $('csvBtn').addEventListener('click', () => {
   const nQ = Math.max(0, ...VIEW.map(r => (r.details || []).length));
-  const head = ['Date','Nom','Prénom','Score (1er coup)','Total','Erreurs','Durée (s)'].concat(Array.from({ length:nQ }, (_, i) => 'Q' + (i+1) + ' essais'));
-  const lines = [head.map(csvCell).join(';')].concat(VIEW.map(r => [fmtDateTime(r.created_at), r.nom, r.prenom, r.score, r.total, r.erreurs, r.duree_sec]
+  const head = ['Date','Nom','Prénom','N° d\'AR','Référence','Score (1er coup)','Total','Erreurs','Durée (s)'].concat(Array.from({ length:nQ }, (_, i) => 'Q' + (i+1) + ' essais'));
+  const lines = [head.map(csvCell).join(';')].concat(VIEW.map(r => [fmtDateTime(r.created_at), r.nom, r.prenom, r.numero_ar, r.reference, r.score, r.total, r.erreurs, r.duree_sec]
     .concat(Array.from({ length:nQ }, (_, i) => (r.details || [])[i]?.tentatives ?? '')).map(csvCell).join(';')));
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type:'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'quiz_securite_' + new Date().toISOString().slice(0,10) + '.csv'; a.click(); URL.revokeObjectURL(a.href);
@@ -302,6 +302,7 @@ function openDetail(id){
     + (ROLE === 'admin' ? '<button class="btn btn-danger" id="dDel">Supprimer</button>' : '')
     + '<button class="btn" id="dPrint">Télécharger le PDF</button></div></div>'
     + '<div class="sheet"><div class="brand">Quiz Sécurité</div><h1>'+esc(r.prenom)+' '+esc(r.nom)+'</h1>'
+    + '<p style="margin:-6px 0 16px;color:var(--ink-dim);">N° d\'AR : <b>'+esc(r.numero_ar || 'non renseigné')+'</b>'+(r.reference ? ' · Référence : <b>'+esc(r.reference)+'</b>' : '')+'</p>'
     + '<div class="summary"><div class="tile"><div class="n">'+r.score+' / '+r.total+'</div><div class="l">Réussies du 1er coup</div></div>'
     + '<div class="tile"><div class="n">'+r.erreurs+'</div><div class="l">Erreurs</div></div>'
     + '<div class="tile"><div class="n">'+fmtDur(r.duree_sec)+'</div><div class="l">Durée</div></div></div>'
