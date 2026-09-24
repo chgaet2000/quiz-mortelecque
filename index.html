@@ -61,17 +61,20 @@
   .ans.sel .box{ background:var(--accent); border-color:var(--accent); }
   .ans.sel .box::after{ content:'✓'; }
 
-  .img-answers{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .img-ans{ position:relative; padding:0 0 30px; border:3px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; cursor:pointer; }
-  .img-ans img{ display:block; width:100%; height:190px; object-fit:contain; }
-  @media (min-width:560px){ .img-answers{ gap:12px; } .img-ans img{ height:280px; } }
-  .img-ans .box{ position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.9); border:2px solid #7a7466;
-                 display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; }
+  /* Questions photo : une photo par ligne, pleine largeur */
+  #qCard.photo-q{ padding:18px 8px 16px; }
+  #qCard.photo-q .q-text, #qCard.photo-q .hint{ padding:0 8px; }
+  .img-answers{ display:flex; flex-direction:column; gap:14px; }
+  .img-ans{ position:relative; display:block; width:100%; padding:0 0 44px; border:4px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; cursor:pointer; }
+  .img-ans img{ display:block; width:100%; height:auto; max-height:80vh; object-fit:contain; }
+  .img-ans .box{ position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,.92); border:3px solid #7a7466;
+                 display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:#fff; }
   .img-ans.sel{ border-color:var(--accent); }
   .img-ans.sel .box{ background:var(--accent); border-color:var(--accent); }
   .img-ans.sel .box::after{ content:'✓'; }
-  .img-ans .num{ position:absolute; left:0; right:0; bottom:0; height:30px; line-height:30px; text-align:center; background:var(--surface-2); color:var(--ink); font-size:13px; font-weight:600; }
+  .img-ans .num{ position:absolute; left:0; right:0; bottom:0; height:44px; line-height:44px; text-align:center; background:var(--surface-2); color:var(--ink); font-size:16px; font-weight:600; }
   .img-ans.sel .num{ background:var(--accent); color:var(--accent-ink); }
+  .opt{ font-weight:400; color:var(--ink-dim); }
 
   .feedback{ margin-top:16px; padding:14px; border-radius:12px; font-weight:600; font-size:16px; text-align:center; }
   .feedback.ok{ background:var(--ok-soft); color:var(--ok); }
@@ -92,6 +95,15 @@
   .status.ok{ background:var(--ok-soft); color:var(--ok); }
   .status.ko{ background:var(--warn-soft); color:var(--warn); }
   .status.wait{ background:var(--surface-2); color:var(--ink-dim); }
+  .recap{ text-align:left; background:var(--surface-2); border-radius:12px; padding:12px 14px; margin:0 0 16px; font-size:15px; }
+  .recap div{ display:flex; justify-content:space-between; gap:12px; padding:5px 0; }
+  .recap span{ color:var(--ink-dim); } .recap b{ text-align:right; }
+  .warn-note{ font-size:13.5px; color:var(--ink-dim); margin:0 0 14px; }
+  .proof{ text-align:center; }
+  .proof .check{ width:84px; height:84px; margin:0 auto 10px; border-radius:50%; background:var(--ok); color:#fff; font-size:48px; line-height:84px; font-weight:700; }
+  .proof h1{ font-size:30px; color:var(--ok); margin:0 0 6px; }
+  .proof .ref{ font-family:'Barlow Condensed',sans-serif; font-size:30px; font-weight:700; letter-spacing:.06em; color:var(--ink); margin:4px 0 2px; }
+  .proof .when{ color:var(--ink-dim); margin-bottom:16px; }
 </style>
 </head>
 <body>
@@ -107,6 +119,8 @@
       <input type="text" id="nom" autocomplete="family-name" autocapitalize="characters" maxlength="80" required>
       <label for="prenom">Prénom</label>
       <input type="text" id="prenom" autocomplete="given-name" autocapitalize="words" maxlength="80" required>
+      <label for="ar">Numéro d'AR <span class="opt">(si connu, facultatif)</span></label>
+      <input type="text" id="ar" autocomplete="off" autocapitalize="characters" maxlength="40">
       <div style="height:20px"></div>
       <button class="btn" type="submit" id="goBtn" disabled>GO !</button>
     </form>
@@ -131,9 +145,22 @@
     <h1>Merci de votre participation</h1>
     <div class="score" id="endScore"></div>
     <div class="score-lbl">questions réussies du premier coup</div>
-    <div id="endStatus" class="status wait">Envoi du résultat…</div>
-    <div style="height:14px"></div>
-    <button class="btn btn-ghost hidden" id="retryBtn">Réessayer l'envoi</button>
+    <div class="recap" id="endRecap"></div>
+    <p class="warn-note">Votre questionnaire n'est pas encore transmis. Appuyez sur le bouton ci-dessous pour l'envoyer définitivement.</p>
+    <button class="btn" id="sendBtn">Valider et envoyer définitivement</button>
+    <div id="endStatus" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+
+  <!-- Preuve de transmission -->
+  <section id="vProof" class="card proof hidden">
+    <div class="check">✓</div>
+    <h1>Questionnaire transmis</h1>
+    <p style="margin:0 0 14px;">Vos réponses ont bien été enregistrées.</p>
+    <div class="score-lbl" style="margin:0;">Référence de transmission</div>
+    <div class="ref" id="proofRef"></div>
+    <div class="when" id="proofWhen"></div>
+    <div class="recap" id="proofRecap"></div>
+    <p class="warn-note">Vous pouvez faire une capture d'écran de cette page comme preuve, puis la fermer.</p>
   </section>
 
 </main>
@@ -204,7 +231,7 @@ function idValid(){ return $('nom').value.trim() && $('prenom').value.trim(); }
 $('idForm').addEventListener('submit', e => {
   e.preventDefault();
   if(!idValid()) return;
-  who = { nom:$('nom').value.trim().toUpperCase(), prenom:$('prenom').value.trim() };
+  who = { nom:$('nom').value.trim().toUpperCase(), prenom:$('prenom').value.trim(), ar:$('ar').value.trim().toUpperCase() };
   idx = 0; tries = QUESTIONS.map(() => 0); startedAt = Date.now();
   show('vIntro', false); show('vQuiz', true); show('footer', true);
   $('qWho').textContent = who.prenom + ' ' + who.nom;
@@ -223,6 +250,7 @@ function renderQuestion(){
   $('qHint').textContent = q.images ? 'Touchez les photos correspondantes (plusieurs réponses possibles).' : multi ? 'Plusieurs réponses possibles.' : 'Une seule réponse.';
   if(q.img){ $('qImg').src = imgUrl(q.img); $('qImg').alt = 'Illustration de la question ' + (idx + 1); show('qImg', true); } else show('qImg', false);
   show('qFeedback', false);
+  $('qCard').classList.toggle('photo-q', !!q.images);
 
   const box = $('qAnswers');
   box.className = q.images ? 'img-answers' : 'answers';
@@ -276,18 +304,33 @@ $('validBtn').addEventListener('click', () => {
   }
 });
 
-/* ---------- Fin + envoi ---------- */
+/* ---------- Fin + envoi définitif ---------- */
+function newReference(){
+  const a = new Uint8Array(6); crypto.getRandomValues(a);
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'MQ-' + [...a].map(x => abc[x % abc.length]).join('');
+}
+function recapHtml(r){
+  const e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return '<div><span>Nom</span><b>' + e(r.nom) + '</b></div>'
+       + '<div><span>Prénom</span><b>' + e(r.prenom) + '</b></div>'
+       + '<div><span>N° d\'AR</span><b>' + e(r.numero_ar || 'Non renseigné') + '</b></div>'
+       + '<div><span>Score (1er coup)</span><b>' + r.score + ' / ' + r.total + '</b></div>';
+}
+
 function finish(){
   show('vQuiz', false); show('footer', false); show('vEnd', true);
   const score = tries.filter(t => t === 1).length;
   result = {
-    quiz_id: QUIZ_ID, nom: who.nom, prenom: who.prenom, score, total: QUESTIONS.length,
+    quiz_id: QUIZ_ID, reference: newReference(), nom: who.nom, prenom: who.prenom, numero_ar: who.ar || null,
+    score, total: QUESTIONS.length,
     erreurs: tries.reduce((s, t) => s + t - 1, 0),
     duree_sec: Math.round((Date.now() - startedAt) / 1000),
     details: QUESTIONS.map((q, i) => ({ n: i + 1, question: q.q, tentatives: tries[i] }))
   };
   $('endScore').textContent = score + ' / ' + QUESTIONS.length;
-  send(result);
+  $('endRecap').innerHTML = recapHtml(result);
+  window.scrollTo({ top:0 });
 }
 
 async function post(row){
@@ -295,31 +338,43 @@ async function post(row){
   const headers = { 'apikey': CFG.SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
   if(CFG.SUPABASE_ANON_KEY.startsWith('eyJ')) headers['Authorization'] = 'Bearer ' + CFG.SUPABASE_ANON_KEY;
   const res = await fetch(CFG.SUPABASE_URL + '/rest/v1/quiz_resultats', { method:'POST', headers, body: JSON.stringify(row) });
+  if(res.status === 409) return;   // référence déjà enregistrée (renvoi) : c'est bien transmis
   if(!res.ok) throw new Error('HTTP ' + res.status);
 }
 
 function readQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch(e){ return []; } }
 function writeQueue(q){ try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch(e){} }
 
-async function send(row){
-  const st = $('endStatus');
-  st.className = 'status wait'; st.textContent = 'Envoi du résultat…'; show('retryBtn', false);
-  try {
-    await post(row);
-    st.className = 'status ok'; st.textContent = 'Résultat enregistré. Vous pouvez fermer cette page.';
-  } catch(e){
-    const q = readQueue(); if(!q.some(r => r._ref === row._ref)){ row._ref = row._ref || Date.now() + '-' + Math.random().toString(36).slice(2); q.push(row); writeQueue(q); }
-    st.className = 'status ko'; st.textContent = "Le résultat n'a pas pu être envoyé (connexion ?). Il sera renvoyé automatiquement, ou touchez « Réessayer ».";
-    show('retryBtn', true);
-  }
+function showProof(r){
+  $('proofRef').textContent = r.reference;
+  $('proofWhen').textContent = 'Transmis le ' + new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  $('proofRecap').innerHTML = recapHtml(r);
+  show('vEnd', false); show('vProof', true);
+  window.scrollTo({ top:0 });
 }
-$('retryBtn').addEventListener('click', async () => { await flushQueue(); if(!readQueue().length){ const st = $('endStatus'); st.className = 'status ok'; st.textContent = 'Résultat enregistré. Vous pouvez fermer cette page.'; show('retryBtn', false); } });
+
+$('sendBtn').addEventListener('click', async () => {
+  if(!result) return;
+  const btn = $('sendBtn'), st = $('endStatus');
+  btn.disabled = true; btn.textContent = 'Envoi en cours…';
+  st.className = 'status wait'; st.textContent = 'Transmission de vos réponses…'; show('endStatus', true);
+  try {
+    await post(result);
+    writeQueue(readQueue().filter(r => r.reference !== result.reference));
+    showProof(result);
+  } catch(e){
+    const q = readQueue(); if(!q.some(r => r.reference === result.reference)){ q.push(result); writeQueue(q); }
+    st.className = 'status ko'; st.textContent = "Échec de l'envoi (pas de connexion ?). Vos réponses sont conservées sur ce téléphone : vérifiez votre connexion puis appuyez de nouveau sur le bouton.";
+    btn.disabled = false; btn.textContent = "Réessayer l'envoi";
+  }
+});
 
 async function flushQueue(){
   const q = readQueue(); if(!q.length) return;
   const left = [];
-  for(const r of q){ const { _ref, ...row } = r; try { await post(row); } catch(e){ left.push(r); } }
+  for(const r of q){ try { await post(r); } catch(e){ left.push(r); } }
   writeQueue(left);
+  if(result && !$('vEnd').classList.contains('hidden') && q.some(r => r.reference === result.reference) && !left.some(r => r.reference === result.reference)) showProof(result);
 }
 window.addEventListener('online', flushQueue);
 flushQueue();
