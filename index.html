@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f4e63">
+<title>Quiz Sécurité</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="config.js"></script>
+<style>
+  :root{
+    --bg:#f3f1ea; --surface:#ffffff; --surface-2:#eae6d8; --ink:#1c1a15; --ink-dim:#6b6558;
+    --line:#dcd6c4; --line-strong:#c7bfa8; --accent:#1f4e63; --accent-ink:#ffffff; --accent-soft:#dbe8ec;
+    --ok:#2f7d4f; --ok-soft:#dcefe1; --warn:#b5451c; --warn-soft:#f6dfd3;
+    --shadow:0 1px 2px rgba(28,26,21,.06), 0 6px 16px -8px rgba(28,26,21,.18); --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#14181a; --surface:#1c2225; --surface-2:#232a2d; --ink:#eef0ea; --ink-dim:#9aa39c;
+      --line:#2c3336; --line-strong:#3a4245; --accent:#68b0c9; --accent-ink:#0d1c21; --accent-soft:#20343b;
+      --ok:#5cbd83; --ok-soft:#1c3327; --warn:#e8875e; --warn-soft:#3a2419;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 20px -10px rgba(0,0,0,.5);
+    }
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; min-height:100%; }
+  body{ background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2{ font-family:'Barlow Condensed','IBM Plex Sans',sans-serif; text-transform:uppercase; letter-spacing:.02em; margin:0; font-weight:700; }
+  .hidden{ display:none !important; }
+  main{ max-width:640px; margin:0 auto; padding:max(20px, env(safe-area-inset-top)) 16px 120px; }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px 20px; }
+  .brand{ font-family:'Barlow Condensed',sans-serif; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); font-weight:700; font-size:14px; }
+  .intro h1{ font-size:40px; margin:4px 0 10px; }
+  .intro p{ color:var(--ink-dim); margin:0 0 20px; line-height:1.5; }
+  label{ display:block; font-size:13px; font-weight:600; margin:14px 0 6px; }
+  input[type=text]{ width:100%; padding:13px 14px; font-size:16px; border:1px solid var(--line-strong); border-radius:10px; background:var(--surface-2); color:var(--ink); font-family:inherit; }
+  input[type=text]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .btn{ appearance:none; border:none; cursor:pointer; border-radius:12px; padding:14px 18px; font-weight:600; font-size:16px; font-family:inherit; background:var(--accent); color:var(--accent-ink); min-height:52px; width:100%; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn-ghost{ background:var(--surface-2); color:var(--ink); border:1px solid var(--line-strong); }
+
+  /* Question */
+  .top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:14px; color:var(--ink-dim); }
+  .top b{ font-family:'Barlow Condensed',sans-serif; font-size:20px; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; }
+  .bar{ height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden; margin-bottom:18px; }
+  .bar > div{ height:100%; background:var(--accent); transition:width .3s; }
+  .q-text{ font-size:21px; font-weight:600; line-height:1.35; margin:0 0 6px; }
+  .hint{ font-size:13.5px; color:var(--ink-dim); margin-bottom:16px; }
+  .q-img{ display:block; max-width:100%; max-height:260px; margin:0 auto 16px; border-radius:10px; }
+
+  .answers{ display:flex; flex-direction:column; gap:10px; }
+  .ans{ display:flex; align-items:center; gap:12px; text-align:left; width:100%; padding:14px 14px; min-height:56px; font-size:16px; font-family:inherit; color:var(--ink);
+        background:var(--surface); border:2px solid var(--line); border-radius:12px; cursor:pointer; }
+  .ans .box{ flex:none; width:22px; height:22px; border:2px solid var(--line-strong); display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--accent-ink); }
+  .ans.radio .box{ border-radius:50%; } .ans.check .box{ border-radius:6px; }
+  .ans.sel{ border-color:var(--accent); background:var(--accent-soft); }
+  .ans.sel .box{ background:var(--accent); border-color:var(--accent); }
+  .ans.sel .box::after{ content:'✓'; }
+
+  .img-answers{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .img-ans{ position:relative; padding:0 0 30px; border:3px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; cursor:pointer; }
+  .img-ans img{ display:block; width:100%; height:190px; object-fit:contain; }
+  @media (min-width:560px){ .img-answers{ gap:12px; } .img-ans img{ height:280px; } }
+  .img-ans .box{ position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.9); border:2px solid #7a7466;
+                 display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; }
+  .img-ans.sel{ border-color:var(--accent); }
+  .img-ans.sel .box{ background:var(--accent); border-color:var(--accent); }
+  .img-ans.sel .box::after{ content:'✓'; }
+  .img-ans .num{ position:absolute; left:0; right:0; bottom:0; height:30px; line-height:30px; text-align:center; background:var(--surface-2); color:var(--ink); font-size:13px; font-weight:600; }
+  .img-ans.sel .num{ background:var(--accent); color:var(--accent-ink); }
+
+  .feedback{ margin-top:16px; padding:14px; border-radius:12px; font-weight:600; font-size:16px; text-align:center; }
+  .feedback.ok{ background:var(--ok-soft); color:var(--ok); }
+  .feedback.ko{ background:var(--warn-soft); color:var(--warn); }
+  @keyframes shake{ 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(5px)} 50%{transform:translateX(-5px)} }
+  .shake{ animation:shake .4s; }
+
+  .footer{ position:fixed; left:0; right:0; bottom:0; padding:12px 16px max(12px, env(safe-area-inset-bottom)); background:linear-gradient(to top, var(--bg) 70%, transparent); }
+  .footer .inner{ max-width:640px; margin:0 auto; }
+
+  /* Fin */
+  .end{ text-align:center; }
+  .end .emoji{ font-size:56px; }
+  .end h1{ font-size:34px; margin:6px 0 14px; }
+  .score{ font-family:'Barlow Condensed',sans-serif; font-size:64px; font-weight:700; color:var(--accent); line-height:1; }
+  .score-lbl{ color:var(--ink-dim); margin:4px 0 18px; }
+  .status{ font-size:14px; padding:10px 12px; border-radius:10px; margin-top:12px; }
+  .status.ok{ background:var(--ok-soft); color:var(--ok); }
+  .status.ko{ background:var(--warn-soft); color:var(--warn); }
+  .status.wait{ background:var(--surface-2); color:var(--ink-dim); }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- Accueil -->
+  <section id="vIntro" class="card intro">
+    <div class="brand">Mortelecque</div>
+    <h1>Quiz Sécurité</h1>
+    <p>Vous allez répondre à ces 15 questions. Vous avez plusieurs chances lorsque vous vous trompez !</p>
+    <form id="idForm" autocomplete="on">
+      <label for="nom">Nom</label>
+      <input type="text" id="nom" autocomplete="family-name" autocapitalize="characters" maxlength="80" required>
+      <label for="prenom">Prénom</label>
+      <input type="text" id="prenom" autocomplete="given-name" autocapitalize="words" maxlength="80" required>
+      <div style="height:20px"></div>
+      <button class="btn" type="submit" id="goBtn" disabled>GO !</button>
+    </form>
+  </section>
+
+  <!-- Question -->
+  <section id="vQuiz" class="hidden">
+    <div class="top"><b id="qNum"></b><span id="qWho"></span></div>
+    <div class="bar"><div id="qBar"></div></div>
+    <div class="card" id="qCard">
+      <p class="q-text" id="qText"></p>
+      <div class="hint" id="qHint"></div>
+      <img class="q-img hidden" id="qImg" alt="">
+      <div id="qAnswers"></div>
+      <div id="qFeedback" class="feedback hidden" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- Fin -->
+  <section id="vEnd" class="card end hidden">
+    <div class="emoji">🎉</div>
+    <h1>Merci de votre participation</h1>
+    <div class="score" id="endScore"></div>
+    <div class="score-lbl">questions réussies du premier coup</div>
+    <div id="endStatus" class="status wait">Envoi du résultat…</div>
+    <div style="height:14px"></div>
+    <button class="btn btn-ghost hidden" id="retryBtn">Réessayer l'envoi</button>
+  </section>
+
+</main>
+
+<div class="footer hidden" id="footer"><div class="inner"><button class="btn" id="validBtn" disabled>Valider</button></div></div>
+
+<script>
+"use strict";
+const CFG = window.QUIZ_CONFIG || {};
+const IMG = 'https://compressed-images.genially.com/img/68e91df19e41f00015de3283/';
+const QUIZ_ID = 'securite';
+const QUEUE_KEY = 'mortelecque_quiz_pending';
+
+/* Questions reprises à l'identique du Genially "Quiz Sécurité". ok = bonne réponse. */
+const QUESTIONS = [
+  { q:"Quels moyens avez-vous pour remonter une situation dangereuse ?", a:[
+    { t:"A l'oral à mon Responsable", ok:true },
+    { t:"Via une fiche de remontée d'information", ok:true },
+    { t:"Je n'ai pas le droit de remonter une situation dangereuse" },
+    { t:"Il n'y pas de situations dangereuses chez Mortelecque" } ] },
+  { q:"Quelle conduite à tenir si j'ai un accident ?", a:[
+    { t:"Je préviens mon responsable dans les 48 heures" },
+    { t:"Je préviens mon responsable dans les 72 heures" },
+    { t:"Je préviens mon responsable dans les 24 heures", ok:true } ] },
+  { q:"Pouvez-vous utiliser les matériels de levage (chariot, pont roulant, etc.) ?", a:[
+    { t:"Non" }, { t:"Oui si je suis habilité", ok:true } ] },
+  { q:"Ai-je le droit d'utiliser les extincteurs en cas de départ de feu", a:[
+    { t:"Non, car je ne suis pas formé" }, { t:"Oui, avec l'extincteur le plus proche", ok:true } ] },
+  { q:"Quel type de masque est mis à disposition pour vous protéger de la poussière ?", a:[
+    { t:"P2" }, { t:"P3", ok:true }, { t:"P4" } ] },
+  { q:"A partir de quelle valeur les bouchons d’oreilles sont obligatoires ?", a:[
+    { t:"90dB" }, { t:"85dB", ok:true }, { t:"80dB" } ] },
+  { q:"Le garde-corps est un moyen de protection ?", a:[
+    { t:"Individuel" }, { t:"Collectif", ok:true } ] },
+  { q:"A-t-on le droit de travailler sur une échelle ou escabeau ?", a:[
+    { t:"Oui" }, { t:"Non", ok:true } ] },
+  { q:"Pour rentrer dans en espace confiné doit-on être en possession d’une autorisation préalable ?", a:[
+    { t:"Oui", ok:true }, { t:"Non" } ] },
+  { q:"Ce symbole ci-dessous correspond à un risque, lequel ?", img:'7acb973a-9e29-47f4-9465-8fba60c6ca43.jpeg', a:[
+    { t:"Bouteille sous-pression" }, { t:"Extrêmement inflammable" }, { t:"Dangereux pour l'environnement" }, { t:"Explosif", ok:true } ] },
+  { q:"Pour une manutention manuelle, quel est la charge maximum tolérée pour les hommes ?", a:[
+    { t:"30 kg", ok:true }, { t:"15kg" } ] },
+  { q:"L’outillage pour une intervention en zone ATEX doit-il être spécifique ?", img:'2ff6a6ab-66e4-43ec-a8cc-76ca39352828.jpeg', a:[
+    { t:"Oui", ok:true }, { t:"Non" } ] },
+  { q:"Quelles sont les situations à risques", images:true, a:[
+    { img:'c2d3144e-cab0-4b9b-9e31-a903c02259ab.jpeg' },
+    { img:'13231b51-7241-40f7-9779-a9d84a092c33.jpeg', ok:true },
+    { img:'e466d04c-71ad-447d-804f-758e6bb86bfc.jpeg', ok:true } ] },
+  { q:"Quelles sont les situations à risques", images:true, a:[
+    { img:'dabac5ad-5b1c-488d-b5f7-c969197a4758.jpeg' },
+    { img:'718d74e4-4488-4a64-a743-2b176f32cea7.jpeg', ok:true },
+    { img:'62c753d9-708e-4067-a2af-6c2f2c238ba3.jpeg', ok:true } ] },
+  { q:"Quelles sont les situations à risques", images:true, a:[
+    { img:'2902ae95-7e94-40f6-be7e-6a297d0750dd.jpeg', ok:true },
+    { img:'16643628-568e-4088-8233-8250f720da4f.jpeg', ok:true },
+    { img:'a2cca07e-9461-4d46-a830-aa3d3d1a3405.jpeg', ok:true } ] }
+];
+
+const $ = id => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle('hidden', !on);
+const imgUrl = f => IMG + f + '/format=webp';
+
+let who = null, idx = 0, sel = new Set(), tries = [], locked = false, startedAt = 0, result = null;
+
+/* ---------- Accueil ---------- */
+function idValid(){ return $('nom').value.trim() && $('prenom').value.trim(); }
+['nom','prenom'].forEach(id => $(id).addEventListener('input', () => $('goBtn').disabled = !idValid()));
+$('idForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if(!idValid()) return;
+  who = { nom:$('nom').value.trim().toUpperCase(), prenom:$('prenom').value.trim() };
+  idx = 0; tries = QUESTIONS.map(() => 0); startedAt = Date.now();
+  show('vIntro', false); show('vQuiz', true); show('footer', true);
+  $('qWho').textContent = who.prenom + ' ' + who.nom;
+  renderQuestion();
+});
+
+/* ---------- Question ---------- */
+function isMulti(q){ return q.a.filter(a => a.ok).length > 1; }
+
+function renderQuestion(){
+  const q = QUESTIONS[idx], multi = isMulti(q);
+  sel = new Set(); locked = false;
+  $('qNum').textContent = 'Question ' + (idx + 1) + '/' + QUESTIONS.length;
+  $('qBar').style.width = (idx / QUESTIONS.length * 100) + '%';
+  $('qText').textContent = q.q;
+  $('qHint').textContent = q.images ? 'Touchez les photos correspondantes (plusieurs réponses possibles).' : multi ? 'Plusieurs réponses possibles.' : 'Une seule réponse.';
+  if(q.img){ $('qImg').src = imgUrl(q.img); $('qImg').alt = 'Illustration de la question ' + (idx + 1); show('qImg', true); } else show('qImg', false);
+  show('qFeedback', false);
+
+  const box = $('qAnswers');
+  box.className = q.images ? 'img-answers' : 'answers';
+  box.innerHTML = '';
+  q.a.forEach((a, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', 'false');
+    if(q.images){
+      b.className = 'img-ans';
+      b.innerHTML = '<img alt="Photo ' + (i + 1) + '"><span class="box"></span><span class="num">Photo ' + (i + 1) + '</span>';
+      b.querySelector('img').src = imgUrl(a.img);
+    } else {
+      b.className = 'ans ' + (multi ? 'check' : 'radio');
+      b.innerHTML = '<span class="box"></span><span></span>';
+      b.lastChild.textContent = a.t;
+    }
+    b.addEventListener('click', () => toggle(i, q.images || multi));
+    box.appendChild(b);
+  });
+  updateValid();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function toggle(i, multiple){
+  if(locked) return;
+  if(multiple){ sel.has(i) ? sel.delete(i) : sel.add(i); }
+  else sel = new Set([i]);
+  [...$('qAnswers').children].forEach((b, j) => { b.classList.toggle('sel', sel.has(j)); b.setAttribute('aria-pressed', String(sel.has(j))); });
+  show('qFeedback', false);
+  updateValid();
+}
+function updateValid(){ $('validBtn').disabled = locked || sel.size === 0; }
+
+$('validBtn').addEventListener('click', () => {
+  if(locked || !sel.size) return;
+  const q = QUESTIONS[idx];
+  tries[idx]++;
+  const good = q.a.every((a, i) => !!a.ok === sel.has(i));
+  const fb = $('qFeedback');
+  if(good){
+    locked = true; updateValid();
+    fb.className = 'feedback ok'; fb.textContent = 'Correct !';
+    setTimeout(() => { idx++; idx < QUESTIONS.length ? renderQuestion() : finish(); }, 1200);
+  } else {
+    fb.className = 'feedback ko'; fb.textContent = "Oops, c'est faux, recommence";
+    const card = $('qCard'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    sel = new Set();
+    [...$('qAnswers').children].forEach(b => { b.classList.remove('sel'); b.setAttribute('aria-pressed', 'false'); });
+    updateValid();
+  }
+});
+
+/* ---------- Fin + envoi ---------- */
+function finish(){
+  show('vQuiz', false); show('footer', false); show('vEnd', true);
+  const score = tries.filter(t => t === 1).length;
+  result = {
+    quiz_id: QUIZ_ID, nom: who.nom, prenom: who.prenom, score, total: QUESTIONS.length,
+    erreurs: tries.reduce((s, t) => s + t - 1, 0),
+    duree_sec: Math.round((Date.now() - startedAt) / 1000),
+    details: QUESTIONS.map((q, i) => ({ n: i + 1, question: q.q, tentatives: tries[i] }))
+  };
+  $('endScore').textContent = score + ' / ' + QUESTIONS.length;
+  send(result);
+}
+
+async function post(row){
+  if(!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY) throw new Error('config manquante');
+  const headers = { 'apikey': CFG.SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+  if(CFG.SUPABASE_ANON_KEY.startsWith('eyJ')) headers['Authorization'] = 'Bearer ' + CFG.SUPABASE_ANON_KEY;
+  const res = await fetch(CFG.SUPABASE_URL + '/rest/v1/quiz_resultats', { method:'POST', headers, body: JSON.stringify(row) });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+function readQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch(e){ return []; } }
+function writeQueue(q){ try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch(e){} }
+
+async function send(row){
+  const st = $('endStatus');
+  st.className = 'status wait'; st.textContent = 'Envoi du résultat…'; show('retryBtn', false);
+  try {
+    await post(row);
+    st.className = 'status ok'; st.textContent = 'Résultat enregistré. Vous pouvez fermer cette page.';
+  } catch(e){
+    const q = readQueue(); if(!q.some(r => r._ref === row._ref)){ row._ref = row._ref || Date.now() + '-' + Math.random().toString(36).slice(2); q.push(row); writeQueue(q); }
+    st.className = 'status ko'; st.textContent = "Le résultat n'a pas pu être envoyé (connexion ?). Il sera renvoyé automatiquement, ou touchez « Réessayer ».";
+    show('retryBtn', true);
+  }
+}
+$('retryBtn').addEventListener('click', async () => { await flushQueue(); if(!readQueue().length){ const st = $('endStatus'); st.className = 'status ok'; st.textContent = 'Résultat enregistré. Vous pouvez fermer cette page.'; show('retryBtn', false); } });
+
+async function flushQueue(){
+  const q = readQueue(); if(!q.length) return;
+  const left = [];
+  for(const r of q){ const { _ref, ...row } = r; try { await post(row); } catch(e){ left.push(r); } }
+  writeQueue(left);
+}
+window.addEventListener('online', flushQueue);
+flushQueue();
+</script>
+</body>
+</html>
