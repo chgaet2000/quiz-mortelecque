@@ -177,7 +177,14 @@ $('loginForm').addEventListener('submit', async e => {
   const btn = $('loginBtn'); btn.disabled = true; $('loginErr').classList.add('hidden');
   const { data, error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
   btn.disabled = false;
-  if(error){ $('loginErr').textContent = 'Identifiants incorrects.'; $('loginErr').classList.remove('hidden'); return; }
+  if(error){
+    const code = error.code || '';
+    $('loginErr').textContent =
+        code === 'email_not_confirmed' ? 'Compte non confirmé : dans Supabase (Authentication > Users), confirmez ce compte ou recréez-le avec « Auto Confirm User » coché.'
+      : code === 'invalid_credentials' ? 'Email ou mot de passe incorrect (ou compte inexistant dans Supabase > Authentication > Users).'
+      : 'Connexion impossible : ' + (error.message || code || 'erreur inconnue');
+    $('loginErr').classList.remove('hidden'); return;
+  }
   await enter(data.user);
 });
 $('logoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
